@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+*{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Alexandria';
+}
+
+.navbar{
+    margin-top: 50px;
+    margin-bottom: 37px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.navbar h1{
+    font-size: 32px;
+    font-weight: 400;
+}
+
+.options{
+    display: flex;
+    gap: 70px;
+}
+
+.options h4{
+    font-size: 20px;
+    font-weight: 400;
+}
+
+form{
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+form img{
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    left: 10px;
+}
+
+form input{
+    padding-left: 50px;
+    width: 230px;
+    height: 41px;
+    font-size: 16px;
+    border: 0px;
+    border-radius: 20px;
+    outline: none;
+    background-color: #F6F6F6;
+
+}
+
+.icons{
+    display: flex;
+    gap: 20px;
+}
+
+.container{
+    display: flex;
+    justify-content: space-between;
+}
+
+.hero-image{
+    width: 1139;
+    height: 914;
+}
+
+.login-form{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.login-form h1{
+    font-weight: 400;
+    font-size: 20px;
+}
+
+.login-form .choice{
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+}
+
+.choice h3{
+    font-weight: 400;
+    font-size: 20px;
+    margin: 0;
+}
