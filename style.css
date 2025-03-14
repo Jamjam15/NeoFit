@@ -8,6 +8,9 @@
 
 body {
     font-family: 'Alexandria';
+    height: 100%;
+    overflow: hidden;
+
 }
 
 .navbar{
@@ -46,7 +49,7 @@ form img{
     left: 10px;
 }
 
-form input{
+.navbar input{
     padding-left: 50px;
     width: 230px;
     height: 41px;
@@ -55,7 +58,6 @@ form input{
     border-radius: 20px;
     outline: none;
     background-color: #F6F6F6;
-
 }
 
 .icons{
@@ -65,19 +67,13 @@ form input{
 
 .container{
     display: flex;
-    justify-content: space-between;
-}
-
-.hero-image{
-    width: 1139;
-    height: 914;
 }
 
 .login-form{
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
     align-items: center;
+    margin: 45px;
 }
 
 .login-form h1{
@@ -85,14 +81,127 @@ form input{
     font-size: 20px;
 }
 
-.login-form .choice{
-    display: flex;
-    flex-direction: row;
-    gap: 40px;
-}
+
 
 .choice h3{
     font-weight: 400;
     font-size: 20px;
     margin: 0;
+}
+
+.form{
+    display: flex;
+    flex-direction: column;
+}
+
+
+.upper{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+
+.upper h1{
+    padding-bottom: 100px;
+}
+
+.login-form .choice{
+    display: flex;
+    flex-direction: row;
+}
+
+.login, .sign-up{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.login h3, .sign-up h3{
+    padding-bottom: 20px;
+}
+
+.line, .line-choice{
+    margin-bottom: 20px;
+}
+
+.line{
+    width: 184px;
+    border: 1px solid black;
+}
+
+.line-choice{
+    width: 184px;
+    border: 1px solid #DFDFDF;
+}
+
+.upper p{
+    font-weight: 300;
+    font-size: 13px;
+    margin-bottom: 40px;
+}
+
+.email-pass{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.email-pass input{
+    border: none;
+    background-color: white;
+    border-bottom: 1px solid #DFDFDF;
+    border-radius: 0px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    width: 100%;
+    padding-bottom: 15px;
+    padding-left: 4px;
+}
+
+.forgot-container{
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+
+.forgot{
+    border: none;
+    background: none;
+    color: #505050;
+    font-weight: 200;
+    font-size: 13px;
+}
+
+.upper .signing{
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.upper .login-button{
+    background-color: #121212;
+    border: none;
+    color: #FFFFFF;
+    width: 100%;
+    height: 37px;
+    border-radius: 20px;
+    margin-bottom: 120px;
+}
+
+.footer{
+    color: #121212;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+}
+
+.footer span{
+    
 }
