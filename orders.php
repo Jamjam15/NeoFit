@@ -286,6 +286,225 @@ $result = $stmt->get_result();
                 font-size: 13px;
             }
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 2% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            display: none; /* Hide the X button */
+        }
+
+        .waybill {
+            width: 100%;
+            max-width: 210mm;
+            padding: 20px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            border: 2px solid #000;
+            background: white;
+            font-size: 14px;
+        }
+
+        .receipt-actions {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .print-btn, .close-btn {
+            background: #55a39b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-btn {
+            background: #666;
+        }
+
+        .print-btn:hover {
+            background: #478c85;
+        }
+
+        .close-btn:hover {
+            background: #555;
+        }
+
+        @media screen and (min-width: 768px) {
+            .waybill {
+                padding: 40px;
+            }
+        }
+
+        .waybill-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        @media screen and (min-width: 768px) {
+            .waybill-header {
+                flex-direction: row;
+                justify-content: space-between;
+                text-align: left;
+                padding-bottom: 10px;
+                gap: 0;
+            }
+        }
+
+        .waybill-logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .waybill-title {
+            font-size: 28px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        .waybill-tracking {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .waybill-sections {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media screen and (min-width: 768px) {
+            .waybill-sections {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .waybill-section {
+            border: 1px solid #000;
+            padding: 15px;
+        }
+
+        .waybill-section h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+
+        .waybill-section p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .package-details {
+            border: 1px solid #000;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+
+        .package-details h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+
+        .signatures {
+            display: none;
+        }
+
+        .signature-box {
+            display: none;
+        }
+
+        .signature-line {
+            display: none;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin: 20px 0 30px 0;
+        }
+
+        .qr-code img {
+            max-width: 100px;
+        }
+
+        /* View Receipt Button Styles */
+        .view-receipt-btn {
+            background: #55a39b;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 2px 4px rgba(85, 163, 155, 0.2);
+        }
+
+        .view-receipt-btn i {
+            font-size: 16px;
+        }
+
+        .view-receipt-btn:hover {
+            background: #478c85;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(85, 163, 155, 0.3);
+        }
+
+        .view-receipt-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(85, 163, 155, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -344,12 +563,17 @@ $result = $stmt->get_result();
                             </div>
                         </div>
 
-                        <div class="order-footer">
-                            <div class="order-total">Total: ₱<?php echo number_format($order['total'], 2); ?></div>
-                            <div class="status-badge status-<?php echo strtolower($order['status']); ?>">
-                                <?php echo $order['status']; ?>
+                                                    <div class="order-footer">
+                                <div class="order-total">Total: ₱<?php echo number_format($order['total'], 2); ?></div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="status-badge status-<?php echo strtolower($order['status']); ?>">
+                                        <?php echo $order['status']; ?>
+                                    </div>
+                                    <button onclick="viewReceipt(<?php echo $order['id']; ?>)" class="view-receipt-btn">
+                                        <i class="fas fa-file-invoice"></i> View Receipt
+                                    </button>
+                                </div>
                             </div>
-                        </div>
                     </div>
                 <?php endwhile; ?>
             <?php else: ?>
@@ -360,8 +584,144 @@ $result = $stmt->get_result();
                 </div>
             <?php endif; ?>
         </div>
+
+                    <!-- Receipt Modal -->
+            <div id="receiptModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <div id="receiptContent">
+                        <div class="waybill">
+                            <!-- Receipt content will be loaded here -->
+                        </div>
+                        <div class="receipt-actions">
+                            <button onclick="downloadReceipt()" class="print-btn">
+                                <i class="fas fa-download"></i> Download Receipt
+                            </button>
+                            <button onclick="document.getElementById('receiptModal').style.display='none'" class="close-btn">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add html2canvas library -->
+            <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     </div>
 
     <?php include 'footer.php'; ?>
+
+    <script>
+        // Get modal elements
+        const modal = document.getElementById('receiptModal');
+        const closeBtn = document.getElementsByClassName('close')[0];
+
+        // Close modal when clicking the X
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function viewReceipt(orderId) {
+            // Fetch order details
+            fetch(`get_order_receipt.php?order_id=${orderId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const order = data.order;
+                        const tracking_number = String(order.id).padStart(8, '0');
+                        
+                        // Format the receipt HTML
+                        const waybillHTML = `
+                            <div class="waybill-header">
+                                <div class="waybill-logo">NEOFIT</div>
+                                <div class="waybill-title">ORDER RECEIPT</div>
+                                <div class="waybill-tracking">Order #: ${tracking_number}</div>
+                            </div>
+
+                            <div class="waybill-sections">
+                                <div class="waybill-section">
+                                    <h3>From</h3>
+                                    <p><strong>NEOFIT</strong></p>
+                                    <p>123 Main Street</p>
+                                    <p>Manila, Philippines</p>
+                                    <p>Contact: (02) 123-4567</p>
+                                </div>
+
+                                <div class="waybill-section">
+                                    <h3>Ship To</h3>
+                                    <p><strong>${order.user_name}</strong></p>
+                                    <p>${order.delivery_address}</p>
+                                    <p>Contact: ${order.contact_number}</p>
+                                    <p>Email: ${order.user_email}</p>
+                                </div>
+                            </div>
+
+                            <div class="package-details">
+                                <h3>Order Details</h3>
+                                <p><strong>Product:</strong> ${order.product_name}</p>
+                                <p><strong>Size:</strong> ${order.size.toUpperCase()}</p>
+                                <p><strong>Quantity:</strong> ${order.quantity} pc(s)</p>
+                                <p><strong>Unit Price:</strong> ₱${parseFloat(order.price).toFixed(2)}</p>
+                                <p><strong>Total Amount:</strong> ₱${parseFloat(order.total).toFixed(2)}</p>
+                                <p><strong>Payment Method:</strong> ${order.payment_method}</p>
+                                ${order.payment_method.toLowerCase() === 'cod' ? 
+                                    `<p><strong>Amount to Collect:</strong> ₱${parseFloat(order.total).toFixed(2)}</p>` : 
+                                    ''}
+                            </div>
+
+                            <div class="qr-code">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=NEOFIT-ORDER-${tracking_number}" alt="Tracking QR Code">
+                                <p>Order #${tracking_number}</p>
+                            </div>`;
+                        
+                        // Update modal content
+                        document.querySelector('.waybill').innerHTML = waybillHTML;
+                        
+                        // Show modal
+                        modal.style.display = 'block';
+                    } else {
+                        alert('Error loading receipt');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading receipt');
+                });
+        }
+
+        function downloadReceipt() {
+            const waybill = document.querySelector('.waybill');
+            
+            // Set white background
+            const originalBackground = waybill.style.background;
+            waybill.style.background = 'white';
+            
+            html2canvas(waybill, {
+                scale: 2, // Higher quality
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: true
+            }).then(canvas => {
+                // Restore original background
+                waybill.style.background = originalBackground;
+                
+                // Convert to PNG and download
+                const image = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = image;
+                a.download = `NEOFIT-Receipt-${document.querySelector('.waybill-tracking').textContent.replace('Order #: ', '')}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+        }
+    </script>
 </body>
 </html>

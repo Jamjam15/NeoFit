@@ -1,5 +1,27 @@
 <?php
-include 'user_settings_backend.php';
+include 'db.php';
+session_start();
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit;
+}
+
+$user_id = $_SESSION['user_id'];
+
+// Get user's address and contact information
+$stmt = $conn->prepare("SELECT house_details, barangay, city, region, contact FROM users WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$stmt->bind_result($house_details, $barangay, $city, $region, $contact);
+$stmt->fetch();
+$stmt->close();
+
+// Concatenate address parts
+$address = '';
+if (!empty($house_details) && !empty($barangay) && !empty($city) && !empty($region)) {
+    $address = $house_details . ', ' . $barangay . ', ' . $city . ', ' . $region;
+}
 
 // Form input values
 $product_id = $_POST['product_id'] ?? '';
@@ -9,10 +31,8 @@ $selected_size = $_POST['size'] ?? 'Not Selected';
 $selected_quantity = $_POST['quantity'] ?? '1';
 $total_price = number_format((float)$product_price * (int)$selected_quantity, 2);
 
-
 if ($product_id) {
     echo "<h2>Product ID: " . htmlspecialchars($product_id) . "</h2>";
-    // Now you can query your DB or show product info based on this ID
 } else {
     echo "<h2>No product selected.</h2>";
 }
@@ -51,6 +71,8 @@ $can_submit = $has_address && $has_contact;
 
     <form action="add_order.php" method="POST" id="orderForm">
         <input type="hidden" name="product_id" value="<?= htmlspecialchars($_GET['id'] ?? '') ?>">
+        <input type="hidden" name="delivery_address" value="<?= htmlspecialchars($address) ?>">
+        <input type="hidden" name="contact_number" value="<?= htmlspecialchars($contact) ?>">
 
         <label for="payment-method">Choose Payment Method:</label><br>
         <select name="payment_method" id="payment-method" required>
@@ -70,8 +92,6 @@ $can_submit = $has_address && $has_contact;
         <p><strong>Total:</strong> ₱<?= $total_price; ?></p>
 
         <!-- Hidden fields -->
-        <input type="hidden" name="delivery_address" value="<?= htmlspecialchars($address); ?>">
-        <input type="hidden" name="contact_number" value="<?= htmlspecialchars($contact); ?>">
         <input type="hidden" name="product_name" value="<?= htmlspecialchars($product_name); ?>">
         <input type="hidden" name="product_price" value="<?= htmlspecialchars($product_price); ?>">
         <input type="hidden" name="size" value="<?= htmlspecialchars($selected_size); ?>">

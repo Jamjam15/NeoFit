@@ -10,16 +10,19 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Get user details
-$user_sql = "SELECT address, contact FROM users WHERE id = ?";
-$stmt = $conn->prepare($user_sql);
+// Get user's address, contact information, and neocreds balance
+$stmt = $conn->prepare("SELECT house_details, barangay, city, region, contact, neocreds FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$user_result = $stmt->get_result();
-$user = $user_result->fetch_assoc();
+$stmt->bind_result($house_details, $barangay, $city, $region, $contact, $neocreds);
+$stmt->fetch();
+$stmt->close();
 
-$address = $user['address'] ?? '';
-$contact = $user['contact'] ?? '';
+// Concatenate address parts
+$address = '';
+if (!empty($house_details) && !empty($barangay) && !empty($city) && !empty($region)) {
+    $address = $house_details . ', ' . $barangay . ', ' . $city . ', ' . $region;
+}
 
 // Check if we're checking out a specific cart item or the entire cart
 $cart_id = $_GET['cart_id'] ?? null;
@@ -294,10 +297,17 @@ $total_amount = 0;
                 <h2 class="section-title">Payment Method</h2>
                 <div class="payment-method">
                     <select name="payment_method" id="payment-method" class="payment-select">
-                        <option value="NeoCreds">NeoCreds</option>
+                        <option value="NeoCreds">NeoCreds (Balance: ₱<?php echo number_format($neocreds, 2); ?>)</option>
                         <option value="Cash On Delivery">Cash On Delivery</option>
                         <option value="Pick Up">Pick Up</option>
                     </select>
+                </div>
+                <div id="neocreds-info" style="margin-top: 10px; display: none;">
+                    <div class="info-value" style="background-color: #f9f9f9; padding: 10px; border-radius: 4px;">
+                        <div style="margin-bottom: 5px;">Current Balance: ₱<span id="current-balance"><?php echo number_format($neocreds, 2); ?></span></div>
+                        <div>Order Total: ₱<span id="order-total"><?php echo number_format($total_amount, 2); ?></span></div>
+                        <div style="margin-top: 5px; font-weight: bold;" id="balance-status"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -324,12 +334,47 @@ $total_amount = 0;
 
     <?php include 'footer.php'; ?>
     <script>
+        document.getElementById('payment-method').addEventListener('change', function() {
+            const neocredsInfo = document.getElementById('neocreds-info');
+            const currentBalance = parseFloat(<?php echo $neocreds; ?>);
+            const orderTotal = parseFloat(<?php echo $total_amount; ?>);
+            
+            if (this.value === 'NeoCreds') {
+                neocredsInfo.style.display = 'block';
+                const balanceStatus = document.getElementById('balance-status');
+                
+                if (currentBalance >= orderTotal) {
+                    balanceStatus.style.color = '#28a745';
+                    balanceStatus.textContent = 'Sufficient Balance ✓';
+                } else {
+                    balanceStatus.style.color = '#dc3545';
+                    balanceStatus.textContent = 'Insufficient Balance ✗';
+                }
+            } else {
+                neocredsInfo.style.display = 'none';
+            }
+        });
+
         document.getElementById('place-order-btn').addEventListener('click', function() {
             if (!this.disabled) {
                 const paymentMethod = document.getElementById('payment-method').value;
                 if (!paymentMethod) {
                     alert('Please select a payment method');
                     return;
+                }
+
+                // Check NeoCreds balance if selected
+                if (paymentMethod === 'NeoCreds') {
+                    const currentBalance = parseFloat(<?php echo $neocreds; ?>);
+                    const orderTotal = parseFloat(<?php echo $total_amount; ?>);
+                    
+                    if (currentBalance < orderTotal) {
+                        if (confirm('Insufficient NeoCreds balance. Would you like to add more NeoCreds to your account?')) {
+                            window.location.href = 'neocreds.php';
+                            return;
+                        }
+                        return;
+                    }
                 }
 
                 const formData = new FormData();
@@ -359,6 +404,9 @@ $total_amount = 0;
                 });
             }
         });
+
+        // Trigger change event to show initial NeoCreds info if selected
+        document.getElementById('payment-method').dispatchEvent(new Event('change'));
     </script>
 </body>
 </html>

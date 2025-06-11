@@ -2,9 +2,14 @@
 session_start();
 include 'db.php';
 
-// Check if user is logged in
+header('Content-Type: application/json');
+
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Please log in to place an order']);
+    echo json_encode(['success' => false, 'message' => 'User not logged in']);
     exit;
 }
 
@@ -14,143 +19,161 @@ $delivery_address = $_POST['delivery_address'] ?? '';
 $contact_number = $_POST['contact_number'] ?? '';
 $cart_id = $_POST['cart_id'] ?? null;
 
-// Validate input
 if (empty($payment_method) || empty($delivery_address) || empty($contact_number)) {
-    echo json_encode(['success' => false, 'message' => 'Please fill in all required fields']);
+    echo json_encode(['success' => false, 'message' => 'Missing required fields']);
     exit;
 }
 
 try {
-    // Start transaction
     $conn->begin_transaction();
 
-    // Get cart items
+    // Get user details first
+    $stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as user_name, email FROM users WHERE id = ?");
+    if (!$stmt) {
+        throw new Exception('Failed to prepare user details query: ' . $conn->error);
+    }
+    
+    $stmt->bind_param("i", $user_id);
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to fetch user details: ' . $stmt->error);
+    }
+    
+    $user_result = $stmt->get_result();
+    $user_details = $user_result->fetch_assoc();
+    
+    if (!$user_details) {
+        throw new Exception('User details not found');
+    }
+
+    // Get cart items and calculate total
     if ($cart_id) {
-        // Single item checkout
-        $sql = "SELECT c.*, p.product_name, p.product_price, 
-                CASE c.size 
-                    WHEN 'small' THEN p.quantity_small
-                    WHEN 'medium' THEN p.quantity_medium
-                    WHEN 'large' THEN p.quantity_large
-                END as available_stock
-                FROM cart c
-                JOIN products p ON c.product_id = p.id
+        $sql = "SELECT c.*, p.product_price, p.product_name FROM cart c 
+                JOIN products p ON c.product_id = p.id 
                 WHERE c.id = ? AND c.user_id = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("ii", $cart_id, $user_id);
     } else {
-        // Full cart checkout
-        $sql = "SELECT c.*, p.product_name, p.product_price,
-                CASE c.size 
-                    WHEN 'small' THEN p.quantity_small
-                    WHEN 'medium' THEN p.quantity_medium
-                    WHEN 'large' THEN p.quantity_large
-                END as available_stock
-                FROM cart c
-                JOIN products p ON c.product_id = p.id
+        $sql = "SELECT c.*, p.product_price, p.product_name FROM cart c 
+                JOIN products p ON c.product_id = p.id 
                 WHERE c.user_id = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $user_id);
     }
+    
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to fetch cart items: ' . $stmt->error);
+    }
+    
+    $result = $stmt->get_result();
+    $total_amount = 0;
+    $cart_items = [];
+    
+    while ($item = $result->fetch_assoc()) {
+        $subtotal = $item['quantity'] * $item['product_price'];
+        $total_amount += $subtotal;
+        $cart_items[] = $item;
+    }
 
-    $stmt->execute();
-    $cart_items = $stmt->get_result();
-
-    if ($cart_items->num_rows === 0) {
+    if (empty($cart_items)) {
         throw new Exception('No items found in cart');
     }
 
-    // Process each cart item
-    while ($item = $cart_items->fetch_assoc()) {
-        // Check stock availability
-        if ($item['quantity'] > $item['available_stock']) {
-            throw new Exception("Not enough stock available for {$item['product_name']}");
+    // Check NeoCreds balance if that's the payment method
+    if ($payment_method === 'NeoCreds') {
+        $stmt = $conn->prepare("SELECT neocreds FROM users WHERE id = ? FOR UPDATE");
+        if (!$stmt) {
+            throw new Exception('Failed to prepare balance check query: ' . $conn->error);
+        }
+        
+        $stmt->bind_param("i", $user_id);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to check balance: ' . $stmt->error);
+        }
+        
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
+
+        if (!$user) {
+            throw new Exception('User not found');
         }
 
-        // Calculate total
-        $total = $item['quantity'] * $item['product_price'];
-
-        // Validate size
-        $size = $item['size'] ?? 'N/A';
-        if (empty($size) || $size === '0') {
-            $size = 'N/A';
+        if ($user['neocreds'] < $total_amount) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => 'Insufficient NeoCreds balance']);
+            exit;
         }
 
-        // Validate payment method
-        if (empty($payment_method) || $payment_method === '0') {
-            throw new Exception('Please select a valid payment method');
+        // Deduct NeoCreds
+        $stmt = $conn->prepare("UPDATE users SET neocreds = neocreds - ? WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception('Failed to prepare balance update query: ' . $conn->error);
         }
-
-        // Insert order
-        $order_sql = "INSERT INTO orders (
-            user_id, user_name, user_email,
-            product_id, product_name, price,
-            size, quantity, total,
-            payment_method, delivery_address, contact_number,
-            status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')";
-
-        $order_stmt = $conn->prepare($order_sql);
-        $order_stmt->bind_param(
-            "issiisdiddss",
-            $user_id,
-            $_SESSION['user_name'],
-            $_SESSION['email'],
-            $item['product_id'],
-            $item['product_name'],
-            $item['product_price'],
-            $size,
-            $item['quantity'],
-            $total,
-            $payment_method,
-            $delivery_address,
-            $contact_number
-        );
-        $order_stmt->execute();
-
-        // Update product stock
-        $update_stock_sql = "UPDATE products SET ";
-        switch ($item['size']) {
-            case 'small':
-                $update_stock_sql .= "quantity_small = quantity_small - ?";
-                break;
-            case 'medium':
-                $update_stock_sql .= "quantity_medium = quantity_medium - ?";
-                break;
-            case 'large':
-                $update_stock_sql .= "quantity_large = quantity_large - ?";
-                break;
+        
+        $stmt->bind_param("di", $total_amount, $user_id);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to update balance: ' . $stmt->error);
         }
-        $update_stock_sql .= " WHERE id = ?";
-
-        $update_stock_stmt = $conn->prepare($update_stock_sql);
-        $update_stock_stmt->bind_param("ii", $item['quantity'], $item['product_id']);
-        $update_stock_stmt->execute();
-
-        // Remove item from cart
-        $delete_cart_sql = "DELETE FROM cart WHERE id = ? AND user_id = ?";
-        $delete_cart_stmt = $conn->prepare($delete_cart_sql);
-        $delete_cart_stmt->bind_param("ii", $item['id'], $user_id);
-        $delete_cart_stmt->execute();
     }
 
-    // Commit transaction
-    $conn->commit();
+    // Create order with initial status
+    $initial_status = ($payment_method === 'NeoCreds') ? 'processing' : 'pending';
+    
+    $stmt = $conn->prepare("INSERT INTO orders (user_id, user_name, user_email, total_amount, payment_method, delivery_address, contact_number, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    if (!$stmt) {
+        throw new Exception('Failed to prepare order creation query: ' . $conn->error);
+    }
+    
+    $stmt->bind_param("issdssss", 
+        $user_id, 
+        $user_details['user_name'],
+        $user_details['email'],
+        $total_amount, 
+        $payment_method, 
+        $delivery_address, 
+        $contact_number, 
+        $initial_status
+    );
+    
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to create order: ' . $stmt->error);
+    }
+    
+    $order_id = $conn->insert_id;
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'Order placed successfully',
-        'redirect' => 'orders.php'
-    ]);
+    // Insert order items
+    $stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, size, price) VALUES (?, ?, ?, ?, ?)");
+    if (!$stmt) {
+        throw new Exception('Failed to prepare order items query: ' . $conn->error);
+    }
+    
+    foreach ($cart_items as $item) {
+        $stmt->bind_param("iiiss", $order_id, $item['product_id'], $item['quantity'], $item['size'], $item['product_price']);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to insert order item: ' . $stmt->error);
+        }
+    }
+
+    // Delete items from cart
+    if ($cart_id) {
+        $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("ii", $cart_id, $user_id);
+    } else {
+        $stmt = $conn->prepare("DELETE FROM cart WHERE user_id = ?");
+        $stmt->bind_param("i", $user_id);
+    }
+    
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to clear cart: ' . $stmt->error);
+    }
+
+    $conn->commit();
+    echo json_encode(['success' => true]);
 
 } catch (Exception $e) {
-    // Rollback transaction on error
     $conn->rollback();
+    error_log('Order processing error: ' . $e->getMessage());
     echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
+        'success' => false, 
+        'message' => 'Error processing order: ' . $e->getMessage()
     ]);
 }
-
-$conn->close();
-?>
