@@ -649,7 +649,14 @@ if ($result->num_rows > 0) {
             <?php if (!$is_logged_in): ?>
                 window.location.href = 'login.php';
                 return;
-            <?php endif; ?>
+            <?php endif; ?>            // Check if selected size has available stock
+            const selectedSize = sizeSelect.value;
+            const available = availableQuantities[selectedSize];
+            
+            if (available <= 0) {
+                alert("Selected size is out of stock");
+                return;
+            }
 
             const formData = new FormData();
             formData.append("product_id", <?php echo $product_id; ?>);
@@ -686,7 +693,14 @@ if ($result->num_rows > 0) {
             const formData = new FormData();
             formData.append("product_id", <?php echo $product_id; ?>);
             formData.append("size", sizeSelect.value);
-            formData.append("quantity", quantityInput.value);
+            formData.append("quantity", quantityInput.value);            // Check if selected size has available stock
+            const selectedSize = sizeSelect.value;
+            const available = availableQuantities[selectedSize];
+            
+            if (available <= 0) {
+                alert("Selected size is out of stock");
+                return;
+            }
 
             fetch("buy_now.php", {
                 method: "POST",
