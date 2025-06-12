@@ -817,6 +817,58 @@ if (isset($_GET['saved'])) {
                 width: 100%;
             }
         }
+
+        /* Address Form Styles */
+        .address-form {
+            display: grid;
+            gap: 20px;
+        }
+
+        .address-group {
+            display: grid;
+            gap: 10px;
+        }
+
+        .address-group select,
+        .address-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            background-color: white;
+        }
+
+        .address-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 35px;
+        }
+
+        .address-group select:focus,
+        .address-group input:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+
+        .street-address {
+            display: grid;
+            gap: 15px;
+        }
+
+        .contact-group {
+            margin-top: 10px;
+        }
+
+        .address-help {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -847,24 +899,89 @@ if (isset($_GET['saved'])) {
         <div class="settings-section">
             <h2 class="section-title">Profile Information</h2>
             <form action="save_profile.php" method="POST" autocomplete="off" id="profileForm">
-                <div class="form-group">
-                    <label for="address">Delivery Address</label>
-                    <input type="text" id="address" name="address" placeholder="Enter your delivery address" 
-                           value="<?php echo htmlspecialchars($address_input); ?>" autocomplete="off">
-                </div>
+                <div class="address-form">
+                    <div class="address-group">
+                        <label for="region">Region</label>
+                        <select id="region" name="region" <?php echo empty($region) ? 'required' : ''; ?>>
+                            <option value="" disabled selected>Select Region</option>
+                            <option value="National Capital Region">National Capital Region (NCR)</option>
+                            <option value="Cordillera Administrative Region">Cordillera Administrative Region (CAR)</option>
+                            <option value="Ilocos Region">Ilocos Region (Region I)</option>
+                            <option value="Cagayan Valley">Cagayan Valley (Region II)</option>
+                            <option value="Central Luzon">Central Luzon (Region III)</option>
+                            <option value="CALABARZON">CALABARZON (Region IV-A)</option>
+                            <option value="MIMAROPA">MIMAROPA (Region IV-B)</option>
+                            <option value="Bicol Region">Bicol Region (Region V)</option>
+                            <option value="Western Visayas">Western Visayas (Region VI)</option>
+                            <option value="Central Visayas">Central Visayas (Region VII)</option>
+                            <option value="Eastern Visayas">Eastern Visayas (Region VIII)</option>
+                            <option value="Zamboanga Peninsula">Zamboanga Peninsula (Region IX)</option>
+                            <option value="Northern Mindanao">Northern Mindanao (Region X)</option>
+                            <option value="Davao Region">Davao Region (Region XI)</option>
+                            <option value="SOCCSKSARGEN">SOCCSKSARGEN (Region XII)</option>
+                            <option value="Caraga">Caraga (Region XIII)</option>
+                            <option value="Bangsamoro">Bangsamoro (BARMM)</option>
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label for="contact">Contact Number</label>
-                    <input type="tel" id="contact" name="contact" placeholder="Enter your contact number (e.g., 09123456789)" 
-                           value="<?php echo htmlspecialchars($contact_input); ?>" 
-                           pattern="[0-9]{10,11}" title="Please enter a valid contact number (For phone numbers start from '09' only)">
-                </div>
+                    <div class="address-group">
+                        <label for="city">City/Municipality</label>
+                        <input type="text" id="city" name="city" 
+                               placeholder="e.g., Makati City, Quezon City" 
+                               <?php echo empty($region) ? 'required' : ''; ?>>
+                    </div>
 
-                <button type="submit" class="btn">Save Changes</button>
+                    <div class="address-group">
+                        <label for="barangay">Barangay</label>
+                        <input type="text" id="barangay" name="barangay" 
+                               placeholder="e.g., San Lorenzo" 
+                               <?php echo empty($region) ? 'required' : ''; ?>>
+                    </div>
 
-                <div class="current-info">
-                    <p><strong>Current Address:</strong> <?php echo htmlspecialchars($address) ?: 'Not set'; ?></p>
-                    <p><strong>Current Contact:</strong> <?php echo htmlspecialchars($contact) ?: 'Not set'; ?></p>
+                    <div class="address-group">
+                        <label for="house_details">House Details</label>
+                        <div class="street-address">
+                            <input type="text" id="house_number" name="house_number" 
+                                   placeholder="House/Unit Number" 
+                                   <?php echo empty($region) ? 'required' : ''; ?>>
+                            <input type="text" id="street_name" name="street_name" 
+                                   placeholder="Street Name" 
+                                   <?php echo empty($region) ? 'required' : ''; ?>>
+                            <input type="text" id="subdivision" name="subdivision" 
+                                   placeholder="Subdivision/Village/Building (Optional)">
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="house_details" name="house_details">
+
+                    <div class="address-group contact-group">
+                        <label for="contact">Contact Number</label>
+                        <input type="tel" id="contact" name="contact" 
+                               placeholder="Enter your contact number (e.g., 09123456789)" 
+                               pattern="[0-9]{10,11}" 
+                               title="Please enter a valid contact number (For phone numbers start from '09' only)"
+                               <?php echo empty($contact) ? 'required' : ''; ?>>
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 20px;">
+                        <button type="submit" class="btn">Save Changes</button>
+                    </div>
+
+                    <div class="current-info" style="margin-top: 20px;">
+                        <?php if (!empty($house_details) || !empty($barangay) || !empty($city) || !empty($region)): ?>
+                            <p><strong>Current Address:</strong></p>
+                            <p><?php 
+                                $full_address = '';
+                                if (!empty($house_details) && !empty($barangay) && !empty($city) && !empty($region)) {
+                                    $full_address = $house_details . ', ' . $barangay . ', ' . $city . ', ' . $region;
+                                }
+                                echo htmlspecialchars($full_address);
+                            ?></p>
+                        <?php else: ?>
+                            <p><strong>Current Address:</strong> Not set</p>
+                        <?php endif; ?>
+                        <p><strong>Current Contact:</strong> <?php echo htmlspecialchars($contact) ?: 'Not set'; ?></p>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1286,6 +1403,99 @@ if (isset($_GET['saved'])) {
                     historyModal.style.display = 'none';
                 }
             };
+
+            // Add this to your existing script section
+            document.addEventListener('DOMContentLoaded', function() {
+                // Capitalize first letter of each word
+                function capitalizeWords(str) {
+                    return str.split(' ')
+                             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                             .join(' ');
+                }
+
+                // Format city name (add City suffix if not present)
+                function formatCityName(city) {
+                    city = capitalizeWords(city.trim());
+                    if (!city.toLowerCase().endsWith('city')) {
+                        city += ' City';
+                    }
+                    return city;
+                }
+
+                // Format barangay name (add Brgy. prefix if not present)
+                function formatBarangayName(barangay) {
+                    barangay = capitalizeWords(barangay.trim());
+                    if (!barangay.toLowerCase().startsWith('brgy.') && 
+                        !barangay.toLowerCase().startsWith('barangay')) {
+                        barangay = 'Brgy. ' + barangay;
+                    }
+                    return barangay;
+                }
+
+                // Format house details
+                function formatHouseDetails(houseNum, streetName, subdivision) {
+                    let details = capitalizeWords(houseNum.trim()) + ' ' + 
+                                capitalizeWords(streetName.trim());
+                    if (subdivision && subdivision.trim()) {
+                        details += ', ' + capitalizeWords(subdivision.trim());
+                    }
+                    return details;
+                }
+
+                // Form submission handler
+                document.getElementById('profileForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Get all address components
+                    const region = document.getElementById('region').value;
+                    const city = document.getElementById('city').value.trim();
+                    const barangay = document.getElementById('barangay').value.trim();
+                    const houseNumber = document.getElementById('house_number').value.trim();
+                    const streetName = document.getElementById('street_name').value.trim();
+                    const subdivision = document.getElementById('subdivision').value.trim();
+
+                    // Only proceed if we have the required fields
+                    if (!region || !city || !barangay || !houseNumber || !streetName) {
+                        alert('Please fill in all required fields');
+                        return;
+                    }
+
+                    // Build house details
+                    let houseDetails = [];
+                    if (houseNumber) houseDetails.push(houseNumber);
+                    if (streetName) houseDetails.push(streetName);
+                    if (subdivision) houseDetails.push(subdivision);
+                    
+                    // Set the concatenated house details to the hidden input
+                    document.getElementById('house_details').value = houseDetails.join(', ');
+
+                    // Submit the form
+                    this.submit();
+                });
+
+                // Real-time formatting for city input
+                document.getElementById('city').addEventListener('blur', function() {
+                    if (this.value.trim()) {
+                        this.value = formatCityName(this.value);
+                    }
+                });
+
+                // Real-time formatting for barangay input
+                document.getElementById('barangay').addEventListener('blur', function() {
+                    if (this.value.trim()) {
+                        this.value = formatBarangayName(this.value);
+                    }
+                });
+
+                // Contact number validation
+                const contactInput = document.getElementById('contact');
+                contactInput.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    if (this.value.length > 11) {
+                        this.value = this.value.slice(0, 11);
+                    }
+                });
+            });
         });
 
         // Password toggle functions
@@ -1306,6 +1516,40 @@ if (isset($_GET['saved'])) {
         // Make these functions globally available
         window.showPassword = showPassword;
         window.hidePassword = hidePassword;
+
+        // City data by region
+        const citiesByRegion = {
+            "National Capital Region": [
+                "Manila", "Quezon City", "Makati", "Pasig", "Taguig", "Parañaque",
+                "Las Piñas", "Mandaluyong", "Marikina", "Pasay", "Caloocan",
+                "Muntinlupa", "San Juan", "Valenzuela", "Navotas", "Malabon", "Pateros"
+            ],
+            "Cordillera Administrative Region": [
+                "Baguio City", "Tabuk City", "Bangued", "La Trinidad", "Lagawe",
+                "Bontoc", "Kabugao"
+            ],
+            // Add more regions and their cities as needed
+        };
+
+        // Function to update city dropdown
+        function updateCityDropdown(region) {
+            const citySelect = document.getElementById('city');
+            citySelect.innerHTML = '<option value="" disabled selected>Select City/Municipality</option>';
+            
+            if (region && citiesByRegion[region]) {
+                citiesByRegion[region].forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    option.textContent = city;
+                    citySelect.appendChild(option);
+                });
+            }
+        }
+
+        // Listen for region changes
+        document.getElementById('region').addEventListener('change', function() {
+            updateCityDropdown(this.value);
+        });
     </script>
 </body>
 </html>

@@ -188,7 +188,16 @@ if ($print_mode):
             <div class="waybill-section">
                 <h3>Recipient</h3>
                 <p><strong><?php echo htmlspecialchars($order['user_name']); ?></strong></p>
-                <p><?php echo htmlspecialchars($order['delivery_address']); ?></p>
+                <p><?php 
+                    $address_parts = array(
+                        $order['house_details'],
+                        $order['barangay'],
+                        $order['city'],
+                        $order['region']
+                    );
+                    $full_address = implode(', ', array_filter($address_parts));
+                    echo htmlspecialchars($full_address);
+                ?></p>
                 <p>Contact: <?php echo htmlspecialchars($order['contact_number']); ?></p>
                 <p>Email: <?php echo htmlspecialchars($order['user_email']); ?></p>
             </div>
@@ -606,7 +615,16 @@ if (empty($payment_method) || $payment_method === '0') {
                     <div class="waybill-section">
                         <h3>Recipient</h3>
                         <p><strong><?php echo htmlspecialchars($order['user_name']); ?></strong></p>
-                        <p><?php echo htmlspecialchars($order['delivery_address']); ?></p>
+                        <p><?php 
+                            $address_parts = array(
+                                $order['house_details'],
+                                $order['barangay'],
+                                $order['city'],
+                                $order['region']
+                            );
+                            $full_address = implode(', ', array_filter($address_parts));
+                            echo htmlspecialchars($full_address);
+                        ?></p>
                         <p>Contact: <?php echo htmlspecialchars($order['contact_number']); ?></p>
                         <p>Email: <?php echo htmlspecialchars($order['user_email']); ?></p>
                     </div>
@@ -710,7 +728,16 @@ if (empty($payment_method) || $payment_method === '0') {
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Delivery Address</span>
-                            <span class="detail-value"><?php echo htmlspecialchars($order['delivery_address']); ?></span>
+                            <span class="detail-value"><?php 
+                                $address_parts = array(
+                                    $order['house_details'],
+                                    $order['barangay'],
+                                    $order['city'],
+                                    $order['region']
+                                );
+                                $full_address = implode(', ', array_filter($address_parts));
+                                echo htmlspecialchars($full_address);
+                            ?></span>
                         </div>
                     </div>
 
