@@ -719,6 +719,90 @@ if (isset($_GET['saved'])) {
             margin-bottom: 16px;
         }
 
+        /* Transaction History Specific Styles */
+        .transaction-item {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+
+        .transaction-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .transaction-item.approved {
+            border-left: 4px solid #22c55e;
+        }
+
+        .transaction-item.pending {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .transaction-item.denied {
+            border-left: 4px solid #ef4444;
+        }
+
+        .transaction-item.payment {
+            border-left: 4px solid #3b82f6;
+        }
+
+        .transaction-info {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .transaction-type {
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .transaction-type i {
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+
+        .transaction-amount {
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .transaction-amount.credit {
+            color: #22c55e;
+        }
+
+        .transaction-amount.debit {
+            color: #ef4444;
+        }
+
+        .transaction-date {
+            color: #64748b;
+            font-size: 0.9em;
+        }
+
+        .transaction-status {
+            text-align: right;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .no-transactions {
+            text-align: center;
+            padding: 32px;
+            color: #64748b;
+        }
+
+        .error {
+            text-align: center;
+            padding: 32px;
+            color: #ef4444;
+        }
+
         @media (max-width: 768px) {
             .modal-content {
                 margin: 10% auto;
@@ -1230,44 +1314,57 @@ if (isset($_GET['saved'])) {
                 const transactionList = document.getElementById('transactionList');
                 transactionList.innerHTML = '<div class="loading">Loading transactions...</div>';
 
-                fetch('process_neocreds.php?action=history')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success' && data.transactions) {
-                            if (data.transactions.length === 0) {
-                                transactionList.innerHTML = `
-                                    <div class="empty-history">
-                                        <i class="fas fa-history"></i>
-                                        <p>No transaction history yet</p>
-                                    </div>
-                                `;
-                                return;
-                            }
+                // Fetch both NeoCreds transactions and payment history
+                Promise.all([
+                    fetch('process_neocreds.php?action=history'),
+                    fetch('process_order.php?action=neocreds_payments')
+                ])
+                .then(responses => Promise.all(responses.map(r => r.json())))
+                .then(([neoCredsData, paymentsData]) => {
+                    if (neoCredsData.status === 'success' && paymentsData.status === 'success') {
+                        const transactions = [
+                            ...neoCredsData.transactions.map(t => ({
+                                ...t,
+                                type: 'top_up',
+                                date: t.request_date
+                            })),
+                            ...paymentsData.transactions.map(t => ({
+                                ...t,
+                                type: 'payment',
+                                date: t.order_date
+                            }))
+                        ];
 
-                            transactionList.innerHTML = data.transactions.map(transaction => `
-                                <div class="transaction-item">
-                                    <div class="transaction-details">
-                                        <div class="transaction-amount">₱${parseFloat(transaction.amount).toFixed(2)}</div>
-                                        <div class="transaction-date">${new Date(transaction.request_date).toLocaleString()}</div>
+                        // Sort by date descending
+                        transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                        transactionList.innerHTML = transactions.length ? transactions.map(transaction => `
+                            <div class="transaction-item ${transaction.type === 'payment' ? 'payment' : transaction.status.toLowerCase()}">
+                                <div class="transaction-info">
+                                    <div class="transaction-type">
+                                        ${transaction.type === 'payment' ? 
+                                            `<i class="fas fa-shopping-cart"></i> Order Payment #${transaction.order_id}` : 
+                                            `<i class="fas fa-coins"></i> NeoCreds Top-up`
+                                        }
                                     </div>
-                                    <span class="transaction-status status-${transaction.status.toLowerCase()}">
-                                        ${transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                                    </span>
+                                    <div class="transaction-amount ${transaction.type === 'payment' ? 'debit' : 'credit'}">
+                                        ${transaction.type === 'payment' ? '-' : ''} ₱${parseFloat(transaction.amount).toFixed(2)}
+                                    </div>
+                                    <div class="transaction-date">
+                                        ${new Date(transaction.date).toLocaleString()}
+                                    </div>
+                                    <div class="transaction-status">
+                                        ${transaction.type === 'payment' ? 'Completed' : transaction.status}
+                                    </div>
                                 </div>
-                            `).join('');
-                        } else {
-                            throw new Error(data.message || 'Failed to load transactions');
-                        }
-                    })
-                    .catch(error => {
-                        transactionList.innerHTML = `
-                            <div class="empty-history">
-                                <i class="fas fa-exclamation-circle"></i>
-                                <p>Error loading transactions</p>
                             </div>
-                        `;
-                        console.error('Error:', error);
-                    });
+                        `).join('') : '<div class="no-transactions">No transactions found</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    transactionList.innerHTML = '<div class="error">Failed to load transactions</div>';
+                });
             }
 
             // Initial load

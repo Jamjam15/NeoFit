@@ -3,31 +3,55 @@ include '../db.php';
 
 // Get customer statistics
 $stats_sql = "SELECT 
-    COUNT(DISTINCT user_name) as total_customers,
+    COUNT(DISTINCT o.user_id) as total_customers,
     COUNT(*) as total_orders,
-    SUM(total) as total_revenue,
-    AVG(total) as avg_order_value,
-    COUNT(DISTINCT DATE(order_date)) as active_days
-FROM orders";
-$stats_result = $conn->query($stats_sql)->fetch_assoc();
+    COALESCE(SUM(oi.quantity * p.product_price), 0) as total_revenue,
+    COALESCE(AVG(oi.quantity * p.product_price), 0) as avg_order_value,
+    COUNT(DISTINCT DATE(o.order_date)) as active_days
+FROM orders o
+LEFT JOIN order_items oi ON o.id = oi.order_id
+LEFT JOIN products p ON oi.product_id = p.id
+WHERE o.status != 'cancelled'";
+
+$stats_result = $conn->query($stats_sql);
+
+if (!$stats_result) {
+    error_log("MySQL Error: " . $conn->error);
+    $stats_result = [
+        'total_customers' => 0,
+        'total_orders' => 0,
+        'total_revenue' => 0,
+        'avg_order_value' => 0,
+        'active_days' => 0
+    ];
+} else {
+    $stats_result = $stats_result->fetch_assoc();
+}
 
 // Get customer list with their order summaries
+// Find and replace the SQL query around line 12
 $sql = "SELECT 
-    user_name,
-    user_email,
-    COUNT(*) as order_count,
-    SUM(total) as total_spent,
-    MAX(order_date) as last_order_date,
-    GROUP_CONCAT(DISTINCT status) as order_statuses,
-    COUNT(CASE WHEN status = 'Pending' THEN 1 END) as pending_orders,
-    COUNT(CASE WHEN status = 'Processing' THEN 1 END) as processing_orders,
-    COUNT(CASE WHEN status = 'Shipped' THEN 1 END) as shipped_orders,
-    COUNT(CASE WHEN status = 'Delivered' THEN 1 END) as delivered_orders,
-    COUNT(CASE WHEN status = 'Cancelled' THEN 1 END) as cancelled_orders
-FROM orders 
-GROUP BY user_name, user_email
-ORDER BY order_count DESC";
-
+        o.id,
+        o.user_id,
+        o.status,
+        o.order_date,
+        COALESCE(SUM(oi.quantity * p.product_price), 0) as total_spent,
+        o.user_email,
+        o.user_name,
+        COUNT(DISTINCT o.id) as order_count,
+        MAX(o.order_date) as last_order_date,
+        SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
+        SUM(CASE WHEN o.status = 'processing' THEN 1 ELSE 0 END) as processing_orders,
+        SUM(CASE WHEN o.status = 'shipped' THEN 1 ELSE 0 END) as shipped_orders,
+        SUM(CASE WHEN o.status = 'delivered' THEN 1 ELSE 0 END) as delivered_orders,
+        SUM(CASE WHEN o.status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
+        GROUP_CONCAT(DISTINCT CONCAT(p.product_name, ' (', oi.quantity, ')') SEPARATOR ', ') as order_items
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        LEFT JOIN products p ON oi.product_id = p.id
+        LEFT JOIN users u ON o.user_id = u.id
+        GROUP BY o.user_id, o.user_email, o.user_name
+        ORDER BY last_order_date DESC";
 $result = $conn->query($sql);
 ?>
 

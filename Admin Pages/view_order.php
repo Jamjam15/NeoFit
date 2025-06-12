@@ -11,13 +11,15 @@ $print_mode = isset($_GET['print']) && $_GET['print'] === 'true';
 // Fetch order details with product information
 $sql = "SELECT o.*, 
                p.product_name as product_display_name,
-               p.product_price, 
+               p.product_price as price, 
                p.photoFront as product_image,
-               (o.total / o.quantity) as unit_price,
-               COALESCE(o.size, 'N/A') as size,
-               COALESCE(o.payment_method, 'N/A') as payment_method
+               oi.quantity,
+               oi.size,
+               COALESCE(o.payment_method, 'N/A') as payment_method,
+               (oi.quantity * p.product_price) as item_total
         FROM orders o 
-        LEFT JOIN products p ON o.product_id = p.id 
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        LEFT JOIN products p ON oi.product_id = p.id 
         WHERE o.id = ?";
 
 $stmt = $conn->prepare($sql);
@@ -35,7 +37,7 @@ $order = $result->fetch_assoc();
 // Format values
 $tracking_number = str_pad($order['id'], 8, '0', STR_PAD_LEFT);
 $order_date = date('F d, Y', strtotime($order['order_date']));
-$total_amount = $order['total'];
+$total_amount = $order['item_total'];
 $unit_price = $order['price'] ?? $order['unit_price'];
 
 // Format size and payment method

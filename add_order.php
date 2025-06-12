@@ -43,6 +43,8 @@ $stmt->bind_param("issiisdssidsss",
     $payment_method, $delivery_address, $contact_number, $status
 );
 
+
+
 if ($stmt->execute()) {
     // Update product stock
     $update_stock_sql = "UPDATE products SET ";

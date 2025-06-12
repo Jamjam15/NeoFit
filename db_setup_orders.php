@@ -6,24 +6,16 @@ include 'db.php';
 
 // Create orders table if it doesn't exist
 $sql = "CREATE TABLE IF NOT EXISTS `orders` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `user_id` int(11) NOT NULL,
+    `id` int(11) NOT NULL AUTO_INCREMENT,    `user_id` int(11) NOT NULL,
     `user_name` varchar(100) NOT NULL,
     `user_email` varchar(100) NOT NULL,
-    `product_id` int(11) NOT NULL,
-    `product_name` varchar(255) NOT NULL,
-    `price` decimal(10,2) NOT NULL,
-    `size` varchar(10) NOT NULL,
-    `quantity` int(11) NOT NULL,
-    `total` decimal(10,2) NOT NULL,
     `delivery_address` text NOT NULL,
     `contact_number` varchar(20) NOT NULL,
     `payment_method` varchar(50) NOT NULL,
     `status` enum('Pending','Processing','Shipped','Delivered','Cancelled') NOT NULL DEFAULT 'Pending',
     `order_date` timestamp NOT NULL DEFAULT current_timestamp(),
     PRIMARY KEY (`id`),
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`),
-    FOREIGN KEY (`product_id`) REFERENCES `products`(`id`)
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 if ($conn->query($sql)) {
@@ -52,6 +44,24 @@ if ($conn->query($sql)) {
     echo "Products table created successfully or already exists.<br>";
 } else {
     echo "Error creating products table: " . $conn->error . "<br>";
+}
+
+// Create order_items table if it doesn't exist
+$sql = "CREATE TABLE IF NOT EXISTS `order_items` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `order_id` int(11) NOT NULL,
+    `product_id` int(11) NOT NULL,
+    `size` varchar(10) NOT NULL,
+    `quantity` int(11) NOT NULL,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`product_id`) REFERENCES `products`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+if ($conn->query($sql)) {
+    echo "Order items table created successfully or already exists.<br>";
+} else {
+    echo "Error creating order items table: " . $conn->error . "<br>";
 }
 
 $conn->close();

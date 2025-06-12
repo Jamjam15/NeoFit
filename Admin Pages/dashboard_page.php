@@ -4,11 +4,13 @@ include '../db.php';
 // Get today's sales and orders
 $today = date('Y-m-d');
 $sql_today_sales = "SELECT 
-                    COALESCE(SUM(total), 0) as today_sales, 
-                    COUNT(*) as today_orders,
-                    COUNT(DISTINCT user_name) as unique_customers
-                    FROM orders 
-                    WHERE DATE(order_date) = ?";
+                    COALESCE(SUM(oi.quantity * p.product_price), 0) as today_sales, 
+                    COUNT(DISTINCT o.id) as today_orders,
+                    COUNT(DISTINCT o.user_name) as unique_customers
+                    FROM orders o
+                    LEFT JOIN order_items oi ON o.id = oi.order_id
+                    LEFT JOIN products p ON oi.product_id = p.id
+                    WHERE DATE(o.order_date) = ?";
 $stmt = $conn->prepare($sql_today_sales);
 $stmt->bind_param("s", $today);
 $stmt->execute();
@@ -17,10 +19,12 @@ $today_result = $stmt->get_result()->fetch_assoc();
 // Get yesterday's sales for comparison
 $yesterday = date('Y-m-d', strtotime('-1 day'));
 $sql_yesterday_sales = "SELECT 
-                       COALESCE(SUM(total), 0) as yesterday_sales,
-                       COUNT(*) as yesterday_orders 
-                       FROM orders 
-                       WHERE DATE(order_date) = ?";
+                       COALESCE(SUM(oi.quantity * p.product_price), 0) as yesterday_sales,
+                       COUNT(DISTINCT o.id) as yesterday_orders 
+                       FROM orders o
+                       LEFT JOIN order_items oi ON o.id = oi.order_id
+                       LEFT JOIN products p ON oi.product_id = p.id
+                       WHERE DATE(o.order_date) = ?";
 $stmt = $conn->prepare($sql_yesterday_sales);
 $stmt->bind_param("s", $yesterday);
 $stmt->execute();
@@ -39,12 +43,14 @@ if ($yesterday_result['yesterday_orders'] > 0) {
 // Get total orders and revenue for last 30 days
 $last_month = date('Y-m-d', strtotime('-30 days'));
 $sql_month_stats = "SELECT 
-                    COUNT(*) as total_orders, 
-                    COALESCE(SUM(total), 0) as total_sales,
-                    COUNT(DISTINCT user_name) as unique_customers,
-                    COUNT(DISTINCT DATE(order_date)) as active_days
-                    FROM orders 
-                    WHERE order_date >= ?";
+                    COUNT(DISTINCT o.id) as total_orders, 
+                    COALESCE(SUM(oi.quantity * p.product_price), 0) as total_sales,
+                    COUNT(DISTINCT o.user_name) as unique_customers,
+                    COUNT(DISTINCT DATE(o.order_date)) as active_days
+                    FROM orders o
+                    LEFT JOIN order_items oi ON o.id = oi.order_id
+                    LEFT JOIN products p ON oi.product_id = p.id
+                    WHERE o.order_date >= ?";
 $stmt = $conn->prepare($sql_month_stats);
 $stmt->bind_param("s", $last_month);
 $stmt->execute();
@@ -69,13 +75,15 @@ if ($month_result['unique_customers'] > 0) {
 $sql_recent = "SELECT 
                o.id, 
                o.user_name, 
-               o.product_name, 
+               p.product_name, 
                o.status, 
                o.order_date, 
-               o.total,
-               o.size,
-               o.quantity
+               (oi.quantity * p.product_price) as item_total,
+               oi.size,
+               oi.quantity
                FROM orders o
+               LEFT JOIN order_items oi ON o.id = oi.order_id
+               LEFT JOIN products p ON oi.product_id = p.id
                ORDER BY o.order_date DESC 
                LIMIT 10";
 $recent_result = $conn->query($sql_recent);
@@ -99,13 +107,15 @@ $low_stock_result = $conn->query($sql_low_stock);
 
 // Get best selling products
 $sql_best_sellers = "SELECT 
-                     product_name,
-                     COUNT(*) as order_count,
-                     SUM(quantity) as units_sold,
-                     SUM(total) as revenue
-                     FROM orders 
-                     WHERE order_date >= ?
-                     GROUP BY product_name
+                     p.product_name,
+                     COUNT(DISTINCT o.id) as order_count,
+                     SUM(oi.quantity) as units_sold,
+                     SUM(oi.quantity * p.product_price) as revenue
+                     FROM orders o
+                     LEFT JOIN order_items oi ON o.id = oi.order_id
+                     LEFT JOIN products p ON oi.product_id = p.id
+                     WHERE o.order_date >= ?
+                     GROUP BY p.product_name, p.id
                      ORDER BY units_sold DESC
                      LIMIT 5";
 $stmt = $conn->prepare($sql_best_sellers);
@@ -614,10 +624,9 @@ $low_stock_result = $conn->query($sql_low_stock);
                                     <span class="status-badge <?php echo $status_class; ?>"><?php echo $row['status']; ?></span>
                                 </div>
                                 <p>
-                                    <strong><?php echo htmlspecialchars($row['user_name']); ?></strong> ordered 
-                                    <?php echo $row['quantity']; ?>x <?php echo htmlspecialchars($row['product_name']); ?> 
+                                    <strong><?php echo htmlspecialchars($row['user_name']); ?></strong> ordered                                    <?php echo $row['quantity']; ?>x <?php echo htmlspecialchars($row['product_name']); ?> 
                                     (<?php echo strtoupper($row['size']); ?>) - 
-                                    ₱<?php echo number_format($row['total'], 2); ?>
+                                    ₱<?php echo number_format($row['item_total'], 2); ?>
                                 </p>
                                 <div class="activity-time"><?php echo $time_ago; ?></div>
                             </div>

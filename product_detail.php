@@ -2,6 +2,8 @@
 session_start();
 include './db.php'; // Include your database connection
 
+$user_email = $_SESSION['email'];
+
 // Check if user is logged in
 $is_logged_in = isset($_SESSION['user_id']);
 

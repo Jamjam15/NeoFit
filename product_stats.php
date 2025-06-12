@@ -4,9 +4,11 @@ include 'db.php';
 function getProductSoldCount($product_name) {
     global $conn;
     
-    $query = "SELECT COALESCE(SUM(quantity), 0) as total_sold 
-              FROM orders 
-              WHERE product_name = ? AND status != 'cancelled'";
+    $query = "SELECT COALESCE(SUM(oi.quantity), 0) AS total_sold
+              FROM order_items oi
+              JOIN orders o ON oi.order_id = o.id
+              JOIN products p ON p.id = oi.product_id
+              WHERE p.product_name = ? AND o.status != 'cancelled'";
               
     $stmt = mysqli_prepare($conn, $query);
     mysqli_stmt_bind_param($stmt, "s", $product_name);
@@ -21,12 +23,19 @@ function getProductSoldCount($product_name) {
 function getAllProductsSoldCount() {
     global $conn;
     
-    $query = "SELECT p.product_name, COALESCE(SUM(o.quantity), 0) as total_sold 
-              FROM products p 
-              LEFT JOIN orders o ON p.product_name = o.product_name AND o.status != 'cancelled'
-              GROUP BY p.product_name";
+    $query = "SELECT p.product_name, COALESCE(SUM(oi.quantity), 0) AS total_sold
+            FROM products p
+            LEFT JOIN order_items oi ON p.id = oi.product_id
+            LEFT JOIN orders o ON oi.order_id = o.id 
+            WHERE o.status != 'cancelled' OR o.status IS NULL
+            GROUP BY p.product_name";
               
     $result = mysqli_query($conn, $query);
+    
+    if (!$result) {
+        error_log("MySQL Error: " . mysqli_error($conn));
+        return array();
+    }
     
     $sold_counts = array();
     while ($row = mysqli_fetch_assoc($result)) {
@@ -35,4 +44,4 @@ function getAllProductsSoldCount() {
     
     return $sold_counts;
 }
-?> 
+?>

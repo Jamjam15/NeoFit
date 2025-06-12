@@ -20,13 +20,14 @@ if (!isset($_GET['transaction_id'])) {
 
 $transaction_id = $_GET['transaction_id'];
 
-try {
-    $query = "SELECT p.*, o.user_name, o.user_email, o.total as order_total,
-                    u.first_name, u.last_name, u.email,
-                    DATE_FORMAT(p.payment_date, '%M %d, %Y %H:%i') as formatted_date
+try {    $query = "SELECT 
+                p.*,
+                o.user_name,
+                o.user_email,
+                o.order_status as delivery_status,
+                DATE_FORMAT(p.payment_date, '%M %d, %Y %H:%i') as formatted_date
             FROM payments p 
-            JOIN orders o ON p.order_id = o.id 
-            JOIN users u ON o.user_id = u.id 
+            LEFT JOIN orders o ON p.order_id = o.id 
             WHERE p.transaction_id = ?";
             
     $stmt = mysqli_prepare($conn, $query);
@@ -63,12 +64,21 @@ try {
             $status_class = 'status-failed';
             break;
     }
+      // Format the response data
+    $response = [
+        'transaction_id' => $payment['transaction_id'],
+        'order_id' => $payment['order_id'],
+        'customer_name' => $payment['user_name'],
+        'customer_email' => $payment['user_email'],
+        'amount' => number_format($payment['amount'], 2),
+        'payment_method' => $payment['payment_method'],
+        'status' => ucfirst($payment['status']),
+        'payment_date' => $payment['formatted_date'],
+        'status_class' => $status_class,
+        'delivery_status' => $payment['delivery_status'] ? ucfirst($payment['delivery_status']) : null
+    ];
     
-    $payment['status_class'] = $status_class;
-    $payment['customer_name'] = $payment['first_name'] . ' ' . $payment['last_name'];
-    $payment['payment_date'] = $payment['formatted_date'];
-    
-    echo json_encode($payment);
+    echo json_encode($response);
     
 } catch (Exception $e) {
     error_log("Error in get_payment_details.php: " . $e->getMessage());

@@ -16,13 +16,14 @@ $user_id = $_SESSION['user_id'];
 $sold_counts = getAllProductsSoldCount();
 
 // Fetch user's favorite products
-$sql = "SELECT p.*, COALESCE(SUM(o.quantity), 0) as total_sold 
+
+// To this:
+$sql = "SELECT p.*, COALESCE(SUM(oi.quantity), 0) as total_sold 
         FROM products p 
-        INNER JOIN favorites f ON p.id = f.product_id 
-        LEFT JOIN orders o ON p.product_name = o.product_name 
-        WHERE f.user_id = ? AND p.product_status = 'live'
-        GROUP BY p.id 
-        ORDER BY f.id DESC";
+        LEFT JOIN order_items oi ON p.id = oi.product_id
+        LEFT JOIN orders o ON oi.order_id = o.id AND o.status != 'cancelled'
+        WHERE p.id IN (SELECT product_id FROM favorites WHERE user_id = ?)
+        GROUP BY p.id, p.product_name, p.product_price, p.photoFront, p.product_status";
 
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);

@@ -11,9 +11,16 @@ $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : null;
 // Base query
 $sql = "SELECT o.*, 
                p.product_name as product_display_name,
-               p.photoFront as product_image 
+               p.photoFront as product_image,
+               oi.quantity,
+               oi.product_id,
+               oi.size,
+               p.product_price as price,
+               (oi.quantity * p.product_price) as item_total
         FROM orders o 
-        LEFT JOIN products p ON o.product_id = p.id WHERE 1=1";
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        LEFT JOIN products p ON oi.product_id = p.id 
+        WHERE 1=1";
 $params = [];
 $types = "";
 
@@ -62,15 +69,17 @@ $result = $stmt->get_result();
 
 // Get order statistics
 $stats_sql = "SELECT 
-    COUNT(*) as total_orders,
-    COUNT(DISTINCT user_name) as unique_customers,
-    SUM(total) as total_revenue,
-    COUNT(CASE WHEN status = 'Pending' THEN 1 END) as pending_orders,
-    COUNT(CASE WHEN status = 'Processing' THEN 1 END) as processing_orders,
-    COUNT(CASE WHEN status = 'Shipped' THEN 1 END) as shipped_orders,
-    COUNT(CASE WHEN status = 'Delivered' THEN 1 END) as delivered_orders,
-    COUNT(CASE WHEN status = 'Cancelled' THEN 1 END) as cancelled_orders
-FROM orders";
+    COUNT(DISTINCT o.id) as total_orders,
+    COUNT(DISTINCT o.user_name) as unique_customers,
+    COALESCE(SUM(oi.quantity * p.product_price), 0) as total_revenue,
+    COUNT(DISTINCT CASE WHEN o.status = 'Pending' THEN o.id END) as pending_orders,
+    COUNT(DISTINCT CASE WHEN o.status = 'Processing' THEN o.id END) as processing_orders,
+    COUNT(DISTINCT CASE WHEN o.status = 'Shipped' THEN o.id END) as shipped_orders,
+    COUNT(DISTINCT CASE WHEN o.status = 'Delivered' THEN o.id END) as delivered_orders,
+    COUNT(DISTINCT CASE WHEN o.status = 'Cancelled' THEN o.id END) as cancelled_orders
+FROM orders o
+LEFT JOIN order_items oi ON o.id = oi.order_id
+LEFT JOIN products p ON oi.product_id = p.id";
 $stats_result = $conn->query($stats_sql)->fetch_assoc();
 ?>
 
@@ -607,7 +616,7 @@ $stats_result = $conn->query($stats_sql)->fetch_assoc();
                                         <p>Size: <?php echo strtoupper($row['size'] ?? 'N/A'); ?></p>
                                         <p>Quantity: <?php echo $row['quantity']; ?></p>
                                         <p>Unit Price: ₱<?php echo number_format($row['price'], 2); ?></p>
-                                        <p>Total: ₱<?php echo number_format($row['total'], 2); ?></p>
+                                        <p>Total: ₱<?php echo number_format($row['item_total'], 2); ?></p>
                                         <p>Payment: <?php echo htmlspecialchars($row['payment_method'] ?? 'N/A'); ?></p>
                                     </div>
                                 </div>

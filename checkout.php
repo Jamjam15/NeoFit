@@ -2,6 +2,10 @@
 session_start();
 include 'db.php';
 
+$user_name = $_SESSION['user_name'] ?? 'Guest';
+$user_email = $_SESSION['email'];
+
+
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -296,11 +300,16 @@ $total_amount = 0;
             <div class="checkout-section">
                 <h2 class="section-title">Payment Method</h2>
                 <div class="payment-method">
-                    <select name="payment_method" id="payment-method" class="payment-select">
-                        <option value="NeoCreds">NeoCreds (Balance: ₱<?php echo number_format($neocreds, 2); ?>)</option>
+                    <select name="payment_method" id="payment-method" class="payment-select" onchange="handlePaymentMethodChange()">
+                        <option value="">Select Payment Method</option>
+                        <option value="NeoCreds">NeoCreds <span id="neocreds-balance"></span></option>
+
                         <option value="Cash On Delivery">Cash On Delivery</option>
                         <option value="Pick Up">Pick Up</option>
                     </select>
+                    <div id="neocreds-balance-display" style="display: none; margin-top: 10px; color: #666;">
+                        Your NeoCreds Balance: <span id="balance-amount">₱0.00</span>
+                    </div>
                 </div>
                 <div id="neocreds-info" style="margin-top: 10px; display: none;">
                     <div class="info-value" style="background-color: #f9f9f9; padding: 10px; border-radius: 4px;">
@@ -334,28 +343,35 @@ $total_amount = 0;
 
     <?php include 'footer.php'; ?>
     <script>
-        document.getElementById('payment-method').addEventListener('change', function() {
-            const neocredsInfo = document.getElementById('neocreds-info');
-            const currentBalance = parseFloat(<?php echo $neocreds; ?>);
-            const orderTotal = parseFloat(<?php echo $total_amount; ?>);
-            
-            if (this.value === 'NeoCreds') {
-                neocredsInfo.style.display = 'block';
-                const balanceStatus = document.getElementById('balance-status');
-                
-                if (currentBalance >= orderTotal) {
-                    balanceStatus.style.color = '#28a745';
-                    balanceStatus.textContent = 'Sufficient Balance ✓';
-                } else {
-                    balanceStatus.style.color = '#dc3545';
-                    balanceStatus.textContent = 'Insufficient Balance ✗';
-                }
-            } else {
-                neocredsInfo.style.display = 'none';
-            }
+        let userNeocredsBalance = 0;
+
+        // Fetch NeoCreds balance when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            fetchNeocredsBalance();
         });
 
-        document.getElementById('place-order-btn').addEventListener('click', function() {
+        // Fetch user's NeoCreds balance
+        function fetchNeocredsBalance() {
+            fetch('process_neocreds.php?action=balance')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        userNeocredsBalance = parseFloat(data.balance);
+                        document.getElementById('balance-amount').textContent = '₱' + userNeocredsBalance.toFixed(2);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Handle payment method change
+        function handlePaymentMethodChange() {
+            const paymentMethod = document.getElementById('payment-method').value;
+            const balanceDisplay = document.getElementById('neocreds-balance-display');
+            balanceDisplay.style.display = paymentMethod === 'NeoCreds' ? 'block' : 'none';
+        }
+
+        document.getElementById('place-order-btn').addEventListener('click', function(e) {
+
             if (!this.disabled) {
                 const paymentMethod = document.getElementById('payment-method').value;
                 if (!paymentMethod) {
@@ -363,16 +379,11 @@ $total_amount = 0;
                     return;
                 }
 
-                // Check NeoCreds balance if selected
+                // Check NeoCreds balance if selected as payment method
                 if (paymentMethod === 'NeoCreds') {
-                    const currentBalance = parseFloat(<?php echo $neocreds; ?>);
-                    const orderTotal = parseFloat(<?php echo $total_amount; ?>);
-                    
-                    if (currentBalance < orderTotal) {
-                        if (confirm('Insufficient NeoCreds balance. Would you like to add more NeoCreds to your account?')) {
-                            window.location.href = 'neocreds.php';
-                            return;
-                        }
+                    const totalAmount = <?php echo $total_amount; ?>;
+                    if (userNeocredsBalance < totalAmount) {
+                        alert('Insufficient NeoCreds balance. Your balance: ₱' + userNeocredsBalance.toFixed(2) + '\nRequired: ₱' + totalAmount.toFixed(2));
                         return;
                     }
                 }
@@ -381,6 +392,8 @@ $total_amount = 0;
                 formData.append('payment_method', paymentMethod);
                 formData.append('delivery_address', <?php echo json_encode($address); ?>);
                 formData.append('contact_number', <?php echo json_encode($contact); ?>);
+                formData.append('user_name', <?php echo json_encode($user_name); ?>);
+                formData.append('user_email', <?php echo json_encode($user_email); ?>);
                 <?php if ($cart_id): ?>
                 formData.append('cart_id', <?php echo $cart_id; ?>);
                 <?php endif; ?>
@@ -400,7 +413,7 @@ $total_amount = 0;
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error processing order');
+                    alert('An error occurred while processing your order');
                 });
             }
         });

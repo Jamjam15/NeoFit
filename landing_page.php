@@ -7,6 +7,8 @@ if (!isset($_SESSION['email'])) {
     exit();
 }
 
+$user_email = $_SESSION['email'];
+
 ?>
 
 
@@ -704,11 +706,14 @@ if (!isset($_SESSION['email'])) {
                     $sold_counts = getAllProductsSoldCount();
 
                     // Fetch Trending Products (products with highest sold count)
-                    $sql = "SELECT p.*, COALESCE(SUM(o.quantity), 0) as total_sold 
+                    
+                    // With this corrected version:
+                    $sql = "SELECT p.*, COALESCE(SUM(oi.quantity), 0) as total_sold 
                             FROM products p 
-                            LEFT JOIN orders o ON p.product_name = o.product_name 
+                            LEFT JOIN order_items oi ON p.id = oi.product_id
+                            LEFT JOIN orders o ON oi.order_id = o.id AND o.status != 'cancelled'
                             WHERE p.product_status = 'live'
-                            GROUP BY p.id 
+                            GROUP BY p.id, p.product_name, p.product_price, p.photoFront, p.product_status 
                             ORDER BY total_sold DESC 
                             LIMIT 4";
                     $result = $conn->query($sql);

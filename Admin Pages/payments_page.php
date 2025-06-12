@@ -173,6 +173,41 @@ require_once 'payment_functions.php';
             max-height: 80vh;
             overflow-y: auto;
         }
+        
+        .payment-method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-left: 8px;
+        }
+        
+        .method-cod {
+            background-color: #ffd700;
+            color: #000;
+        }
+        
+        .method-pickup {
+            background-color: #87ceeb;
+            color: #000;
+        }
+        
+        .method-neocreds {
+            background-color: #98fb98;
+            color: #000;
+        }
+        
+        .status-completed {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        small {
+            display: block;
+            margin-top: 4px;
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -308,13 +343,13 @@ require_once 'payment_functions.php';
                                 <button onclick="viewPaymentDetails('<?php echo htmlspecialchars($payment['transaction_id']); ?>')" class="btn-view">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <?php if ($payment['status'] === 'pending'): ?>
-                                <button onclick="updatePaymentStatus('<?php echo htmlspecialchars($payment['transaction_id']); ?>', 'success')" class="btn-approve">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <button onclick="updatePaymentStatus('<?php echo htmlspecialchars($payment['transaction_id']); ?>', 'failed')" class="btn-reject">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                <?php if ($payment['status'] === 'pending' && ($payment['payment_method'] === 'Cash On Delivery' || $payment['payment_method'] === 'Pickup')): ?>
+                                    <button onclick="updatePaymentStatus('<?php echo htmlspecialchars($payment['transaction_id']); ?>', 'success')" class="btn-approve" title="Mark as Paid">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button onclick="updatePaymentStatus('<?php echo htmlspecialchars($payment['transaction_id']); ?>', 'failed')" class="btn-reject" title="Mark as Cancelled">
+                                        <i class="fas fa-times"></i>
+                                    </button>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -478,9 +513,7 @@ require_once 'payment_functions.php';
             .finally(() => {
                 hideLoading();
             });
-        }
-
-        function viewPaymentDetails(transactionId) {
+        }        function viewPaymentDetails(transactionId) {
             showLoading();
             
             fetch(`get_payment_details.php?transaction_id=${encodeURIComponent(transactionId)}`)
@@ -521,8 +554,15 @@ require_once 'payment_functions.php';
                             <div class="payment-detail-label">Status</div>
                             <div class="payment-detail-value">
                                 <span class="payment-status ${data.status_class}">${data.status}</span>
+                                ${data.payment_method === 'NeoCreds' ? '<br><small>(Auto-completed)</small>' : ''}
                             </div>
                         </div>
+                        ${data.delivery_status ? `
+                        <div class="payment-detail-row">
+                            <div class="payment-detail-label">Delivery Status</div>
+                            <div class="payment-detail-value">${data.delivery_status}</div>
+                        </div>
+                        ` : ''}
                     `;
                     
                     content.innerHTML = details;
@@ -558,4 +598,4 @@ require_once 'payment_functions.php';
         </div>
     </div>
 </body>
-</html> 
+</html>

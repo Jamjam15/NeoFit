@@ -88,7 +88,11 @@ function getFilteredPayments($search = '', $status = '', $date = '', $page = 1, 
         
         $where_sql = !empty($where_clauses) ? "WHERE " . implode(" AND ", $where_clauses) : "";
         
-        $query = "SELECT p.*, o.user_name, o.user_email, o.total as order_total,
+        $query = "SELECT p.*, o.user_name, o.user_email, 
+                                (SELECT SUM(oi2.quantity * pr2.product_price) 
+                                 FROM order_items oi2 
+                                 JOIN products pr2 ON oi2.product_id = pr2.id 
+                                 WHERE oi2.order_id = o.id) as order_total,
                         u.first_name, u.last_name, u.email
                 FROM payments p 
                 JOIN orders o ON p.order_id = o.id 

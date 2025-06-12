@@ -2,11 +2,11 @@
 require_once '../db_connection.php';
 
 try {
-    // Create payments table if not exists
-    $query = "CREATE TABLE IF NOT EXISTS payments (
+    // Create payments table if not exists    $query = "CREATE TABLE IF NOT EXISTS payments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         transaction_id VARCHAR(100) NOT NULL UNIQUE,
         order_id INT NOT NULL,
+        user_name VARCHAR(255) NOT NULL,
         amount DECIMAL(10,2) NOT NULL,
         payment_method VARCHAR(50) NOT NULL,
         status ENUM('pending', 'success', 'failed') DEFAULT 'pending',

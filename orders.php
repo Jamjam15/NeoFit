@@ -23,16 +23,32 @@ $sql = "SELECT o.*, p.photoFront
 if ($active_tab !== 'all') {
     $sql .= " AND o.status = ?";
 }
+/// Get user's orders based on status filter
+$sql = "SELECT o.*, oi.quantity, oi.size, p.product_name, p.photoFront, p.product_price as price,
+        (oi.quantity * p.product_price) as item_total
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        JOIN products p ON oi.product_id = p.id
+        WHERE o.user_id = ?";
+
+// Add status filter if not showing all
+if ($active_tab !== 'all') {
+    $sql .= " AND o.status = ?";
+}
 $sql .= " ORDER BY o.order_date DESC";
 
+// Prepare and execute the statement
 $stmt = $conn->prepare($sql);
+
 if ($active_tab !== 'all') {
     $stmt->bind_param("is", $user_id, $active_tab);
 } else {
     $stmt->bind_param("i", $user_id);
 }
+
 $stmt->execute();
 $result = $stmt->get_result();
+
 ?>
 
 <!DOCTYPE html>
@@ -563,8 +579,9 @@ $result = $stmt->get_result();
                             </div>
                         </div>
 
+
                                                     <div class="order-footer">
-                                <div class="order-total">Total: ₱<?php echo number_format($order['total'], 2); ?></div>
+                                <div class="order-total">Total: ₱<?php echo number_format($order['item_total'], 2); ?></div>
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div class="status-badge status-<?php echo strtolower($order['status']); ?>">
                                         <?php echo $order['status']; ?>
@@ -573,6 +590,7 @@ $result = $stmt->get_result();
                                         <i class="fas fa-file-invoice"></i> View Receipt
                                     </button>
                                 </div>
+
                             </div>
                     </div>
                 <?php endwhile; ?>

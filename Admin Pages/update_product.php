@@ -99,7 +99,7 @@ try {
 
     $stmt = $conn->prepare($sql);
     $stmt->bind_param(
-        "ssdiiisssssssi",
+        "ssdiiissssssi",
         $product_name,
         $product_category,
         $product_price,
