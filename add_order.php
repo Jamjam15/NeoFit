@@ -43,9 +43,14 @@ $stmt->bind_param("issiisdssidsss",
     $payment_method, $delivery_address, $contact_number, $status
 );
 
-
-
 if ($stmt->execute()) {
+    // Insert into order_items
+    $order_id = $conn->insert_id;
+    $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, size) VALUES (?, ?, ?, ?)");
+    $item_stmt->bind_param("iiis", $order_id, $product_id, $quantity, $size);
+    $item_stmt->execute();
+    $item_stmt->close();
+
     // Update product stock
     $update_stock_sql = "UPDATE products SET ";
     switch ($size) {

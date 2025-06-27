@@ -36,5 +36,12 @@ if ($user_id) {
     }
 }
 
+// Fetch current threshold
+$threshold = 5; // default
+$result = $conn->query("SELECT setting_value FROM admin_settings WHERE setting_key = 'low_stock_threshold'");
+if ($result && $row = $result->fetch_assoc()) {
+    $threshold = (int)$row['setting_value'];
+}
+
 $conn->close();
 ?>

@@ -1,14 +1,27 @@
 <?php
 include '../db.php';
 
+// Fetch current threshold
+$threshold = 5; // default value
+$result = $conn->query("SELECT setting_value FROM admin_settings WHERE setting_key = 'low_stock_threshold'");
+if ($result && $row = $result->fetch_assoc()) {
+    $threshold = (int)$row['setting_value'];
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_account'])) {
         // Account settings update logic would go here
         $success_message = "Account settings updated successfully!";
     } elseif (isset($_POST['update_preferences'])) {
-        // System preferences update logic would go here
+        $new_threshold = (int)$_POST['low_stock_threshold'];
+        // Insert or update the threshold in the database
+        $stmt = $conn->prepare("INSERT INTO admin_settings (setting_key, setting_value) VALUES ('low_stock_threshold', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
+        $stmt->bind_param("s", $new_threshold);
+        $stmt->execute();
+        $stmt->close();
         $success_message = "System preferences updated successfully!";
+        $threshold = $new_threshold; // update the value for the form
     }
 }
 ?>
@@ -173,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <form method="POST">
                         <div class="form-group">
                             <label class="form-label">Low Stock Alert Threshold</label>
-                            <input type="number" class="form-input" name="low_stock_threshold" value="5" min="1" required>
+                            <input type="number" class="form-input" name="low_stock_threshold" value="<?php echo htmlspecialchars($threshold); ?>" min="1" required>
                             <small style="color: #666; display: block; margin-top: 5px;">Products with stock below this number will be highlighted</small>
                         </div>
                         <button type="submit" name="update_preferences" class="btn-save">Save Preferences</button>

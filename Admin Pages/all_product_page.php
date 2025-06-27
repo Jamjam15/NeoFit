@@ -2,6 +2,13 @@
 
 include '../db.php';
 
+// Fetch low stock threshold from admin_settings
+$threshold = 5; // default value
+$result_threshold = $conn->query("SELECT setting_value FROM admin_settings WHERE setting_key = 'low_stock_threshold'");
+if ($result_threshold && $row_threshold = $result_threshold->fetch_assoc()) {
+    $threshold = (int)$row_threshold['setting_value'];
+}
+
 // Get filters from URL parameters
 $category = isset($_GET['category']) ? $_GET['category'] : 'All';
 $status = isset($_GET['status']) ? $_GET['status'] : 'All';
@@ -144,10 +151,14 @@ $total_count = $count_result->fetch_assoc()['total'];
 
         .stock-warning {
             color: #856404;
-            background-color: #fff3cd;
-            padding: 2px 6px;
+            background-color: #ffe082;
+            padding: 2px 8px;
             border-radius: 3px;
-            font-size: 0.85em;
+            font-size: 0.95em;
+            font-weight: bold;
+            display: inline-block;
+            white-space: nowrap;
+            margin-top: 2px;
         }
 
         .product-image {
@@ -249,6 +260,29 @@ $total_count = $count_result->fetch_assoc()['total'];
         .currency-symbol {
             font-family: 'Arial Unicode MS', 'Arial', sans-serif;
             margin-right: 1px;
+        }
+
+        .low-stock-row {
+            background-color: #fff3cd !important;
+        }
+
+        .stock-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            height: 100%;
+        }
+        .stock-number {
+            display: block;
+        }
+
+        table tr, table td, table th {
+            vertical-align: middle;
+        }
+        table tr {
+            height: 60px;
         }
     </style>
 </head>
@@ -373,7 +407,7 @@ $total_count = $count_result->fetch_assoc()['total'];
                             $total_stock = $row['total_stock'];
                             $status_class = strtolower($row['product_status']) === 'live' ? 'status-live' : 'status-unpublished';
                             ?>
-                            <tr>
+                            <tr<?php if ($total_stock <= $threshold) echo ' class="low-stock-row"'; ?>>
                                 <td><input type="checkbox" class="product-select" value="<?php echo $row['id']; ?>"></td>
                                 <td class="product-name-cell">
                                     <img src="<?php 
@@ -395,10 +429,12 @@ $total_count = $count_result->fetch_assoc()['total'];
                                 <td><?php echo $row['quantity_small']; ?></td>
                                 <td><?php echo $row['quantity_medium']; ?></td>
                                 <td><?php echo $row['quantity_large']; ?></td>
-                                <td>
+                                <td style="text-align: center;">
                                     <?php echo $total_stock; ?>
-                                    <?php if ($total_stock <= 5): ?>
-                                        <span class="stock-warning">Low Stock</span>
+                                    <?php if ($total_stock <= $threshold): ?>
+                                        <br><span class="stock-warning">Low Stock</span>
+                                    <?php else: ?>
+                                        <br><span class="stock-warning" style="visibility:hidden;">Low Stock</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="price-column">
